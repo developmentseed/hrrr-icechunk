@@ -1,0 +1,43 @@
+# Version control
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.tox/
+.coverage
+.pytest_cache/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+.env
+
+# Development files
+.mypy_cache/
+.ruff_cache/
+*.log
+
+# Documentation
+*.md
+docs/
+
+# CDK
+cdk.out/
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
