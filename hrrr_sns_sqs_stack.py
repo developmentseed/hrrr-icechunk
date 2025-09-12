@@ -1,4 +1,5 @@
 from aws_cdk import (
+    CustomResource,
     Duration,
     Stack,
     Tags,
@@ -27,6 +28,7 @@ from aws_cdk import (
 from aws_cdk import (
     aws_sqs as sqs,
 )
+from aws_cdk import custom_resources as cr
 from constructs import Construct
 
 
@@ -77,7 +79,8 @@ class HrrrSnsSqsStack(Stack):
             self,
             "HrrrProcessorLambda",
             code=_lambda.DockerImageCode.from_image_asset(
-                "lambda",
+                directory="lambda",
+                file="append/Dockerfile",
                 platform=ecr_assets.Platform.LINUX_AMD64,   # or LINUX_AMD64
             ),
             architecture=_lambda.Architecture.X86_64,
@@ -105,8 +108,7 @@ class HrrrSnsSqsStack(Stack):
         )
 
         # Grant Lambda permissions to write to the icechunk S3 bucket
-        icechunk_bucket.grant_read(hrrr_lambda)
-        icechunk_bucket.grant_write(hrrr_lambda)
+        icechunk_bucket.grant_read_write(hrrr_lambda)
 
         hrrr_lambda.add_event_source(
             lambda_event_sources.SqsEventSource(
@@ -116,3 +118,35 @@ class HrrrSnsSqsStack(Stack):
                 max_concurrency=2,
             )
         )
+
+        initialize_icechunk_lambda = _lambda.DockerImageFunction(
+            self,
+            "InitializeIcechunkLambda",
+            code=_lambda.DockerImageCode.from_image_asset(
+                directory="lambda",
+                file="initialize/Dockerfile",
+                platform=ecr_assets.Platform.LINUX_AMD64,   # or LINUX_AMD64
+            ),
+            architecture=_lambda.Architecture.X86_64,
+            timeout=Duration.minutes(5),
+            memory_size=2048,
+        )
+
+        icechunk_bucket.grant_read_write(initialize_icechunk_lambda)
+
+        custom_resource_provider = cr.Provider(
+            self,
+            "S3BucketCustomResourceProvider",
+            on_event_handler=initialize_icechunk_lambda,
+        )
+
+        bucket_custom_resource = CustomResource(
+            self,
+            "S3BucketCustomResource",
+            service_token=custom_resource_provider.service_token,
+            properties={
+                "BucketName": icechunk_bucket.bucket_name,
+            },
+        )
+
+        bucket_custom_resource.node.add_dependency(icechunk_bucket)

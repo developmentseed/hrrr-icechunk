@@ -10,9 +10,9 @@ ENV PIP_NO_CACHE_DIR=1 \
 RUN dnf -y install git && \
     dnf clean all
 
-COPY pyproject.toml ./
+COPY initialize/pyproject.toml ./
 RUN pip install --target /var/task .
-COPY hrrr.py handler.py /var/task
+COPY hrrr.py initialize/handler.py /var/task
 
 # Runtime stage
 FROM public.ecr.aws/lambda/python:3.12
