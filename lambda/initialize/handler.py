@@ -10,7 +10,7 @@ tracer = Tracer()
 @tracer.capture_lambda_handler
 def handler(event, context: LambdaContext):
     try:
-        initialize_icechunk() 
+        initialize_icechunk()
         logger.info("Icechunk initialized")
     except Exception as e:
         logger.error(f"Error in custom resource handler: {e}")

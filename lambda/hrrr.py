@@ -14,11 +14,11 @@ from virtualizarr.manifests import ManifestArray
 from virtualizarr.manifests.store import ObjectStoreRegistry
 from zarr.abc.store import Store
 
-_STEPS_SIZE = 48
+_STEPS_SIZE = 49
 
 
 def cache_and_open_virtual_dataset(
-        url, scheme, bucket, parser, loadable_variables, registry
+    url, scheme, bucket, parser, loadable_variables, registry
 ):
     store, path_in_store = registry.resolve(url)
     memory_store = MemoryStore()
@@ -38,7 +38,7 @@ def sanitize_variables(ds, loadable):
     for var in loadable:
         if var in ds:
             del ds[var].encoding["serializer"]
-            
+
     for name, var in ds.variables.items():
         if "reference_date" in var.attrs:
             del var.attrs["reference_date"]
@@ -65,21 +65,21 @@ def generate_chunk_key(
 
 def get_time_index(store: Store, time: np.datetime64):
     time_array = zarr.open_array(store, path="time", mode="r")
-    epoch = np.datetime64('1970-01-01T00:00:00')
-    seconds_since_epoch = (time - epoch) / np.timedelta64(1, 's')
+    epoch = np.datetime64("1970-01-01T00:00:00")
+    seconds_since_epoch = (time - epoch) / np.timedelta64(1, "s")
     encoded_time = int(seconds_since_epoch)
 
     chunk_size = time_array.chunks[0] if time_array.chunks else 1000
-    
+
     for i in range(0, time_array.shape[0], chunk_size):
         end_idx = min(i + chunk_size, time_array.shape[0])
         chunk = time_array[i:end_idx]
-        
+
         # Find encoded value in current chunk
         local_indices = np.where(chunk == encoded_time)[0]
         if len(local_indices) > 0:
             return i + int(local_indices[0])
-    
+
     return None
 
 
@@ -118,7 +118,7 @@ def write_virtual_variable_region(
         new_shape = list(arr.shape)
         new_shape[0] += 1
         arr.resize(tuple(new_shape))
-        
+
     last_updated_at = datetime.now(timezone.utc) + timedelta(seconds=1)
     virtual_chunk_spec_list = [
         VirtualChunkSpec(
@@ -131,7 +131,7 @@ def write_virtual_variable_region(
         for path, offset, length in it
         if path
     ]
-    
+
     store.set_virtual_refs(
         array_path=name,
         chunks=virtual_chunk_spec_list,
@@ -173,17 +173,14 @@ def initialize_icechunk():
     )
     config = icechunk.RepositoryConfig.default()
     config.set_virtual_chunk_container(
-        icechunk.VirtualChunkContainer(
-            f"{scheme}{bucket}/",
-            s3_chunk_store
-        )
+        icechunk.VirtualChunkContainer(f"{scheme}{bucket}/", s3_chunk_store)
     )
     credentials = icechunk.containers_credentials(
         {f"{scheme}{bucket}/": icechunk.s3_anonymous_credentials()}
     )
 
     storage = icechunk.s3_storage(
-        bucket="icechunk-hrrr", 
+        bucket="icechunk-hrrr",
         region="us-east-1",
         prefix="test",
         from_env=True,
@@ -241,35 +238,25 @@ def append_grib(bucket: str, key: str):
     )
     config = icechunk.RepositoryConfig.default()
     config.set_virtual_chunk_container(
-        icechunk.VirtualChunkContainer(
-            f"{scheme}{bucket}/",
-            s3_chunk_store
-        )
+        icechunk.VirtualChunkContainer(f"{scheme}{bucket}/", s3_chunk_store)
     )
     credentials = icechunk.containers_credentials(
         {f"{scheme}{bucket}/": icechunk.s3_anonymous_credentials()}
     )
 
     storage = icechunk.s3_storage(
-        bucket="icechunk-hrrr", 
-        region="us-east-1",
-        prefix="test",
-        from_env=True
+        bucket="icechunk-hrrr", region="us-east-1", prefix="test", from_env=True
     )
 
     repo = icechunk.Repository.open_or_create(
-        storage=storage,
-        config=config,
-        authorize_virtual_chunk_access=credentials
+        storage=storage, config=config, authorize_virtual_chunk_access=credentials
     )
     session = repo.writable_session("main")
 
     time_index = get_time_index(store=session.store, time=vds.time[0].values)
     increment_time = False
     if time_index is None:
-        time_index = extend_time_dimension(
-            store=session.store, time=vds.time[0].values
-        )
+        time_index = extend_time_dimension(store=session.store, time=vds.time[0].values)
         increment_time = True
 
     virtual_variables = {

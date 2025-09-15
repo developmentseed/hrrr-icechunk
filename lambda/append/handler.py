@@ -21,17 +21,17 @@ processor = BatchProcessor(event_type=EventType.SQS)
 def record_handler(record: SQSRecord) -> None:
     """
     Process individual SQS record.
-    
+
     Args:
         record: SQS record from the batch
     """
     try:
         # Extract message body
         message_body = record.body
-        
+
         # Parse the SNS message if it's from SNS
         message = json.loads(message_body)
-        
+
         # If message is from SNS, extract the actual message
         if "Message" in message:
             sns_message = json.loads(message["Message"])
@@ -39,11 +39,11 @@ def record_handler(record: SQSRecord) -> None:
         else:
             # Direct SQS message
             process_hrrr_notification(message)
-            
+
     except Exception as e:
         logger.error(
             f"Error processing record: {str(e)}",
-            extra={"message_id": record.message_id}
+            extra={"message_id": record.message_id},
         )
         raise
 
@@ -52,7 +52,7 @@ def record_handler(record: SQSRecord) -> None:
 def process_hrrr_notification(message: Dict[str, Any]) -> None:
     """
     Process a HRRR notification message.
-    
+
     Args:
         message: The HRRR notification message to process
     """
@@ -60,16 +60,12 @@ def process_hrrr_notification(message: Dict[str, Any]) -> None:
     bucket = message.get("Records", [{}])[0].get("s3", {}).get("bucket", {}).get("name")
     key = message.get("Records", [{}])[0].get("s3", {}).get("object", {}).get("key")
     if key and bucket:
-        ext = Path(key).suffix.lstrip(".") 
+        ext = Path(key).suffix.lstrip(".")
         hrrr_types = ["wrfsfc"]
-        if any(s in key for s in hrrr_types) \
-                and ext == "grib2" and ".ak" not in key:
+        if any(s in key for s in hrrr_types) and ext == "grib2" and ".ak" not in key:
             logger.info(
                 "HRRR file available",
-                extra={
-                    "bucket": bucket, 
-                    "key": key, 
-                    "s3_uri": f"s3://{bucket}/{key}"}
+                extra={"bucket": bucket, "key": key, "s3_uri": f"s3://{bucket}/{key}"},
             )
             append_grib(bucket=bucket, key=key)
             logger.info(f"{key} successfully appended")
@@ -80,11 +76,11 @@ def process_hrrr_notification(message: Dict[str, Any]) -> None:
 def handler(event, context: LambdaContext):
     """
     Lambda function to process HRRR notification messages from SQS queue.
-    
+
     Args:
         event: Lambda event containing SQS records
         context: Lambda context object
-        
+
     """
     return process_partial_response(
         event=event,
@@ -92,4 +88,3 @@ def handler(event, context: LambdaContext):
         processor=processor,
         context=context,
     )
-
