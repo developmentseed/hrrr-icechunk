@@ -1,3 +1,5 @@
+from typing import Any
+
 from aws_cdk import (
     CustomResource,
     Duration,
@@ -30,12 +32,16 @@ from aws_cdk import (
 )
 from aws_cdk import custom_resources as cr
 from constructs import Construct
-from settings import StackSettings
+from settings import StackSettings  # type: ignore[import-not-found]
 
 
 class HrrrSnsSqsStack(Stack):
     def __init__(
-        self, scope: Construct, construct_id: str, settings: StackSettings, **kwargs
+        self: Any,
+        scope: Construct,
+        construct_id: str,
+        settings: StackSettings,
+        **kwargs: Any,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 

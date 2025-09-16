@@ -19,6 +19,11 @@ repos:
         args: [ --fix ]
       # Run the formatter.
       - id: ruff-format
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests]
   - repo: https://github.com/citation-file-format/cff-converter-python
     rev: ebf0b5e44d67f8beaa1cd13a0d0393ea04c6058d
     hooks:

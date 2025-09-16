@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import aws_cdk as cdk
-from settings import StackSettings
-from stack import HrrrSnsSqsStack
+from settings import StackSettings  # type: ignore[import-not-found]
+from stack import HrrrSnsSqsStack  # type: ignore[import-not-found]
 
 settings = StackSettings()
 
