@@ -17,9 +17,8 @@ This project uses `uv` to manage dependencies and virtual environments. To insta
 Install dependencies for resolving references in your favorite IDE:
 
 ```plain
-uv venv
-source .venv/bin/activate
 uv sync --all-groups
+source .venv/bin/activate
 nodeenv -m .venv -p --node=22.19.0
 hash -r
 npm install aws-cdk
