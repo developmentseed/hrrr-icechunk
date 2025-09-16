@@ -8,9 +8,10 @@ from aws_lambda_powertools.utilities.batch import (
     EventType,
     process_partial_response,
 )
+from aws_lambda_powertools.utilities.batch.types import PartialItemFailureResponse
 from aws_lambda_powertools.utilities.data_classes import SQSRecord
 from aws_lambda_powertools.utilities.typing import LambdaContext
-from hrrr import append_grib
+from hrrr import append_grib  # type: ignore[import-not-found]
 
 logger = Logger()
 tracer = Tracer()
@@ -73,7 +74,7 @@ def process_hrrr_notification(message: Dict[str, Any]) -> None:
 
 @logger.inject_lambda_context()
 @tracer.capture_lambda_handler
-def handler(event, context: LambdaContext):
+def handler(event: Any, context: LambdaContext) -> PartialItemFailureResponse:
     """
     Lambda function to process HRRR notification messages from SQS queue.
 

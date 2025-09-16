@@ -1,25 +1,30 @@
 from datetime import datetime, timedelta, timezone
-from typing import cast
+from typing import List, cast
 
 import icechunk
 import numpy as np
 import virtualizarr as vz
 import xarray as xr
 import zarr
-from hrrrparser import HRRRParser
-from hrrrparser.codecs import LEVEL_COORDINATES
+from hrrrparser import HRRRParser  # type: ignore[import-untyped]
+from hrrrparser.codecs import LEVEL_COORDINATES  # type: ignore[import-untyped]
+from icechunk import IcechunkStore as Store
 from icechunk import VirtualChunkSpec
 from obstore.store import MemoryStore, S3Store
 from virtualizarr.manifests import ManifestArray
 from virtualizarr.manifests.store import ObjectStoreRegistry
-from zarr.abc.store import Store
 
 _STEPS_SIZE = 49
 
 
 def cache_and_open_virtual_dataset(
-    url, scheme, bucket, parser, loadable_variables, registry
-):
+    url: str,
+    scheme: str,
+    bucket: str,
+    parser: HRRRParser,
+    loadable_variables: List[str],
+    registry: ObjectStoreRegistry,
+) -> xr.Dataset:
     store, path_in_store = registry.resolve(url)
     memory_store = MemoryStore()
     buffer = store.get(path_in_store).bytes()
@@ -34,19 +39,19 @@ def cache_and_open_virtual_dataset(
     return vds
 
 
-def sanitize_variables(ds, loadable):
-    for var in loadable:
-        if var in ds:
-            del ds[var].encoding["serializer"]
+def sanitize_variables(vds: xr.Dataset, loadable_variables: List[str]) -> None:
+    for key in loadable_variables:
+        if key in vds:
+            del vds[key].encoding["serializer"]
 
-    for name, var in ds.variables.items():
+    for name, var in vds.variables.items():
         if "reference_date" in var.attrs:
             del var.attrs["reference_date"]
             del var.attrs["forecast_date"]
             del var.attrs["forecast_end_date"]
 
 
-def modify_time_encoding(vds):
+def modify_time_encoding(vds: xr.Dataset) -> None:
     encoding = vds.time.encoding
     encoding["units"] = "seconds since 1970-01-01"
     encoding["calendar"] = "standard"
@@ -63,7 +68,7 @@ def generate_chunk_key(
     return index_list
 
 
-def get_time_index(store: Store, time: np.datetime64):
+def get_time_index(store: Store, time: np.datetime64) -> int | None:
     time_array = zarr.open_array(store, path="time", mode="r")
     epoch = np.datetime64("1970-01-01T00:00:00")
     seconds_since_epoch = (time - epoch) / np.timedelta64(1, "s")
@@ -83,7 +88,7 @@ def get_time_index(store: Store, time: np.datetime64):
     return None
 
 
-def extend_time_dimension(store: Store, time: np.datetime64):
+def extend_time_dimension(store: Store, time: np.datetime64) -> int:
     time_array = zarr.open_array(store, path="time", mode="a")
     old_len = time_array.shape[0]
     new_len = old_len + 1
@@ -99,7 +104,7 @@ def write_virtual_variable_region(
     store: Store,
     time_index: int,
     increment_time: bool,
-):
+) -> None:
     ma = cast(ManifestArray, var.data)
     manifest = ma.manifest
 
@@ -139,7 +144,7 @@ def write_virtual_variable_region(
     )
 
 
-def initialize_icechunk():
+def initialize_icechunk() -> None:
     parser = HRRRParser(steps=_STEPS_SIZE)
 
     scheme = "s3://"
@@ -206,7 +211,7 @@ def initialize_icechunk():
     print(ds["tmp_isobar"])
 
 
-def append_grib(bucket: str, key: str):
+def append_grib(bucket: str, key: str) -> None:
     parser = HRRRParser(steps=_STEPS_SIZE)
 
     scheme = "s3://"
@@ -267,7 +272,7 @@ def append_grib(bucket: str, key: str):
 
     for name, var in virtual_variables.items():
         write_virtual_variable_region(
-            name=name,
+            name=name,  # type: ignore
             var=var,
             store=session.store,
             time_index=time_index,
