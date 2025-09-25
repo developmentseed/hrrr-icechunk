@@ -10,6 +10,12 @@ from aws_cdk import (
     aws_ecr_assets as ecr_assets,
 )
 from aws_cdk import (
+    aws_events as events,
+)
+from aws_cdk import (
+    aws_events_targets as targets,
+)
+from aws_cdk import (
     aws_iam as iam,
 )
 from aws_cdk import (
@@ -159,3 +165,33 @@ class HrrrSnsSqsStack(Stack):
         )
 
         bucket_custom_resource.node.add_dependency(icechunk_bucket)
+
+        cleanup_lambda = _lambda.DockerImageFunction(
+            self,
+            "CronScheduledLambda",
+            code=_lambda.DockerImageCode.from_image_asset(
+                directory="lambda",
+                file="cleanup/Dockerfile",  # Reusing the same Docker image for now
+                platform=ecr_assets.Platform.LINUX_AMD64,
+            ),
+            architecture=_lambda.Architecture.X86_64,
+            timeout=Duration.minutes(10),
+            memory_size=2048,
+        )
+
+        icechunk_bucket.grant_read_write(cleanup_lambda)
+
+        # Create EventBridge rule to trigger Lambda at 1:30 PM UTC daily
+        cron_rule = events.Rule(
+            self,
+            "CronLambdaSchedule",
+            schedule=events.Schedule.cron(
+                minute="30",
+                hour="13",  # 1:30 PM UTC
+                day="*",
+                month="*",
+                year="*",
+            ),
+        )
+
+        cron_rule.add_target(targets.LambdaFunction(cleanup_lambda))
